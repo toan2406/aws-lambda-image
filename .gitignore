@@ -4,3 +4,6 @@ build/
 config.json
 npm-debug.log
 *.sw?
+.env
+deploy.env
+event.json
