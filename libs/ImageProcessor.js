@@ -2,6 +2,7 @@ var ImageResizer = require("./ImageResizer");
 var ImageReducer = require("./ImageReducer");
 var S3           = require("./S3");
 var Promise      = require("es6-promise").Promise;
+var request      = require("request-promise");
 
 /**
  * Image processor
@@ -23,6 +24,8 @@ function ImageProcessor(s3Object) {
  * @param Config config
  */
 ImageProcessor.prototype.run = function ImageProcessor_run(config) {
+    var self = this;
+    var targetedImage;
     return new Promise(function(resolve, reject) {
         // If object.size equals 0, stop process
         if ( this.s3Object.object.size === 0 ) {
@@ -38,21 +41,41 @@ ImageProcessor.prototype.run = function ImageProcessor_run(config) {
             this.s3Object.bucket.name,
             unescape(this.s3Object.object.key.replace(/\+/g, ' '))
         )
-        .then(function(imageData) {
-            this.processImage(imageData, config)
-            .then(function(results) {
-                S3.putObjects(results)
-                .then(function(images) {
-                    resolve(images);
-                })
-                .catch(function(messages) {
-                    reject(messages);
-                });
-            })
-            .catch(function(messages) {
-                reject(messages);
+        .then(function(image) {
+            targetedImage = image;
+            if (targetedImage.metadata.res) {
+                return request(`http://dreamworks-asia.com/api/v1/resolution/${targetedImage.metadata.res}`);
+            } else {
+                resolve('No image to be proceeded.');
+            }
+        })
+        .then(function(serializedResolution) {
+            var resolution = JSON.parse(serializedResolution);
+            config.set('resizes', [{
+                width: resolution.width || '',
+                height: resolution.height || '',
+                directory: resolution.label
+            }]);
+            return self.processImage(targetedImage.data, config);
+        })
+        .then(function(results) {
+            return S3.putObjects(results);
+        })
+        .then(function(images) {
+            var imageUrl = `//${images[0].getBucketName()}.s3.amazonaws.com/${images[0].getFileName()}`;
+            return request.put({
+                url: 'http://dreamworks-asia.com/api/v1/set-image',
+                formData: {
+                    model: targetedImage.metadata.model,
+                    doc: targetedImage.metadata.doc,
+                    path: targetedImage.metadata.path,
+                    image_url: imageUrl
+                }
             });
-        }.bind(this))
+        })
+        .then(function() {
+            resolve('1 images has proceeded.');  
+        })
         .catch(function(error) {
             reject(error);
         });

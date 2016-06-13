@@ -22,7 +22,10 @@ function getObject(bucket, key, acl) {
                     return;
                 }
 
-                resolve(new ImageData(key, bucket, data.Body, { ContentType: data.ContentType, CacheControl: data.CacheControl }, acl));
+                resolve({
+                    metadata: data.Metadata,
+                    data: new ImageData(key, bucket, data.Body, { ContentType: data.ContentType, CacheControl: data.CacheControl }, acl)
+                });
             }
         });
     });
