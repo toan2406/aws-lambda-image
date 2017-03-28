@@ -62,6 +62,7 @@ ImageProcessor.prototype.run = function ImageProcessor_run(config) {
             return S3.putObjects(results);
         })
         .then(function(images) {
+            console.log('===== IMAGES =====\n', images);
             var imageUrl = `//${images[0].getBucketName()}.s3.amazonaws.com/${images[0].getFileName()}`;
             return request.put({
                 url: 'http://dreamworks-asia.com/api/v1/set-image',
@@ -74,7 +75,7 @@ ImageProcessor.prototype.run = function ImageProcessor_run(config) {
             });
         })
         .then(function() {
-            resolve('1 images has proceeded.');  
+            resolve('1 images has proceeded.');
         })
         .catch(function(error) {
             reject(error);
@@ -100,6 +101,7 @@ ImageProcessor.prototype.processImage = function ImageProcessor_processImage(ima
         }.bind(this));
 
     if ( config.exists("reduce") ) {
+        console.log('===== REDUCE IMAGE =====');
         var reduce = config.get("reduce");
 
         if ( ! reduce.bucket ) {

@@ -21,6 +21,7 @@ exports.handler = function(event, context) {
     );
 
     console.log(s3Object);
+    console.log('===== CONFIG =====\n', config);
     processor.run(config)
     .then(function(messages) {
         console.log(messages);
